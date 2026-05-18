@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { QaBoard } from "./features/qa/QaBoard";
 import { SettingsDrawer } from "./features/settings/SettingsDrawer";
 import { appConfig } from "./shared/config";
+import { InviteShareButton } from "@baditaflorin/mesh-common";
 
 export type Mode = "audience" | "presenter";
 
@@ -44,6 +45,7 @@ export function App() {
     <div className="app-root">
       <QaBoard roomId={roomId} mode={mode} voterId={voterId} />
 
+      <InviteShareButton appName={appConfig.appName} roomId={roomId} />
       <button
         type="button"
         className="settings-fab"
