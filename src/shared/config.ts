@@ -1,6 +1,9 @@
 export const appConfig = {
   appName: "mesh-anonymous-qa",
   storagePrefix: "mesh-anonymous-qa",
+  description:
+    "Peer-to-peer mesh: audience submits questions anonymously, upvotes others. Replaces Slido / Mentimeter Q&A for free, unlimited.",
+  accentHex: "#3f9ef5",
   version: __APP_VERSION__,
   commit: __GIT_COMMIT__,
   repositoryUrl: "https://github.com/baditaflorin/mesh-anonymous-qa",

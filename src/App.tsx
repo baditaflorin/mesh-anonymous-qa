@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { MeshShell } from "@baditaflorin/mesh-common";
 import { QaBoard } from "./features/qa/QaBoard";
-import { SettingsDrawer } from "./features/settings/SettingsDrawer";
+import { SettingsExtras } from "./features/settings/SettingsExtras";
 import { appConfig } from "./shared/config";
-import { InviteShareButton, MeshBeacon } from "@baditaflorin/mesh-common";
 
 export type Mode = "audience" | "presenter";
 
@@ -30,7 +30,6 @@ export function App() {
     const raw = readString(STORAGE.mode, "audience");
     return raw === "presenter" ? "presenter" : "audience";
   });
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const voterId = useMemo(() => ensureVoterId(), []);
 
@@ -42,43 +41,13 @@ export function App() {
   }, [mode]);
 
   return (
-    <div className="app-root">
+    <MeshShell
+      config={appConfig}
+      roomId={roomId}
+      onRoomChange={setRoomId}
+      settingsExtras={<SettingsExtras mode={mode} onModeChange={setMode} />}
+    >
       <QaBoard roomId={roomId} mode={mode} voterId={voterId} />
-
-      <InviteShareButton appName={appConfig.appName} roomId={roomId} />
-      <MeshBeacon app={appConfig.appName} room={roomId} />
-
-      <button
-        type="button"
-        className="settings-fab"
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Open settings"
-      >
-        ⚙
-      </button>
-
-      <div className="self-ref">
-        <a href={appConfig.repositoryUrl} target="_blank" rel="noreferrer">
-          source
-        </a>
-        <span aria-hidden="true">·</span>
-        <a href={appConfig.paypalUrl} target="_blank" rel="noreferrer">
-          tip ♥
-        </a>
-        <span aria-hidden="true">·</span>
-        <span>
-          v{appConfig.version} · {appConfig.commit}
-        </span>
-      </div>
-
-      <SettingsDrawer
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        roomId={roomId}
-        onRoomChange={setRoomId}
-        mode={mode}
-        onModeChange={setMode}
-      />
-    </div>
+    </MeshShell>
   );
 }
