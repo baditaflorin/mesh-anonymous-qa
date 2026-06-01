@@ -70,3 +70,49 @@ test("submitted question + upvote + mark-answered propagate peer→peer", async 
     await cleanup();
   }
 });
+
+/**
+ * Vote dedup is the load-bearing correctness claim that makes this a real Slido
+ * replacement (README: "the same person can't multi-vote"). A voter's upvote is
+ * keyed by `<questionId>:<voterId>`, so re-clicking the SAME button must not
+ * stack a second vote — it toggles the single vote off. This drives the toggle
+ * on peer A and asserts the bounded net score crosses the mesh to peer B both
+ * ways (1 → 0), guarding against any regression that lets a tally run away.
+ */
+test("re-clicking upvote toggles a single vote off, net stays bounded peer→peer", async ({
+  browser,
+  baseURL,
+}) => {
+  const roomId = `e2e-${Math.random().toString(36).slice(2, 8)}`;
+  const { a, b, cleanup } = await openTwoPeers(browser, baseURL ?? "", {
+    storagePrefix,
+    roomId,
+  });
+  try {
+    await a.getByRole("button", { name: /join room/i }).click();
+    await b.getByRole("button", { name: /join room/i }).click();
+
+    const question = `dedup probe ${roomId}`;
+    await a.getByPlaceholder(/ask anything/i).fill(question);
+    await a.getByRole("button", { name: /^submit$/i }).click();
+
+    const aItem = a.locator(".qa-item", { hasText: question });
+    const bItem = b.locator(".qa-item", { hasText: question });
+    await expect(bItem).toBeVisible({ timeout: 10000 });
+
+    const aUp = aItem.getByRole("button", { name: /upvote/i });
+
+    // One upvote → net 1 on both peers.
+    await aUp.click();
+    await expect(aItem.locator(".qa-net")).toHaveText("1", { timeout: 10000 });
+    await expect(bItem.locator(".qa-net")).toHaveText("1", { timeout: 10000 });
+
+    // Clicking the SAME upvote a second time must NOT make net 2 — it toggles
+    // the vote off (net 0). This is the anti-multi-vote guarantee.
+    await aUp.click();
+    await expect(aItem.locator(".qa-net")).toHaveText("0", { timeout: 10000 });
+    await expect(bItem.locator(".qa-net")).toHaveText("0", { timeout: 10000 });
+  } finally {
+    await cleanup();
+  }
+});
