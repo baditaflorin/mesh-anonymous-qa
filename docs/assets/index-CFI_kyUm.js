@@ -28,23 +28,23 @@ Use Chrome, Firefox or Internet Explorer 11`)}}).call(this)}).call(this,x("_proc
     margin-right: `).concat(c,"px ").concat(i,`;
     `),a==="padding"&&"padding-right: ".concat(c,"px ").concat(i,";")].filter(Boolean).join(""),`
   }
-  
+
   .`).concat(co,` {
     right: `).concat(c,"px ").concat(i,`;
   }
-  
+
   .`).concat(uo,` {
     margin-right: `).concat(c,"px ").concat(i,`;
   }
-  
+
   .`).concat(co," .").concat(co,` {
     right: 0 `).concat(i,`;
   }
-  
+
   .`).concat(uo," .").concat(uo,` {
     margin-right: 0 `).concat(i,`;
   }
-  
+
   body[`).concat(Zs,`] {
     `).concat(bA,": ").concat(c,`px;
   }
