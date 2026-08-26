@@ -28,9 +28,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* This feature owns its actual Yjs awareness display below. The shell has no
- * room object to report here, so do not imply a second lifecycle or force the
- * framework name into the product bar. */
+/* The shell has no room object to report here, so do not imply a second
+ * lifecycle or force the framework name into the product bar. The feature
+ * deliberately uses shared-room wording instead of an unreliable connection
+ * count derived from browser awareness. */
 .mesh-app-root[data-mesh-app-id="mesh-anonymous-qa"] .mesh-app-bar-eyebrow,
 .mesh-app-root[data-mesh-app-id="mesh-anonymous-qa"] .mesh-app-bar-state {
   display: none;

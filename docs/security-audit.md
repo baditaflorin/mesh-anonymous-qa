@@ -1,6 +1,6 @@
 # Security audit — mesh-anonymous-qa
 
-Generated: **2026-08-26T04:35:40.323Z** · 17 checks · 17 pass · 0 fail
+Generated: **2026-08-26T05:01:36.637Z** · 20 checks · 20 pass · 0 fail
 
 > A programmatic, CPU-only verification of shared security invariants and app-specific safety checks.
 > Re-run with `npm run audit:security` from this repo. Source: `mesh-common/tests/securityAudit.test.ts`
@@ -12,7 +12,7 @@ Generated: **2026-08-26T04:35:40.323Z** · 17 checks · 17 pass · 0 fail
 ✅ **All checks pass.**
 
 - crypto / Y.Doc invariants: **16 / 16**
-- UI-flow checks: **1**
+- UI-flow checks: **4**
 
 ## Checks
 
@@ -35,6 +35,9 @@ Generated: **2026-08-26T04:35:40.323Z** · 17 checks · 17 pass · 0 fail
 | `L1.TOFU.register`                           | register() writes a self-signed PubkeyRecord into the registry Y.Map                                              | Verify the stored record's signature against its own pubkey                                                                                                        |   ✅   |
 | `L1.TOFU.rejectImposter`                     | A forged record signed by the wrong key does not block the real peer from publishing                              | Pre-write mallory-signed alice claim; alice arrives and overwrites with her own                                                                                    |   ✅   |
 | `UI.QA.literalQuestionAndVisibilityBoundary` | Question text renders as literal text, and the app discloses that room participants can read unlabeled questions. | Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy. |   ✅   |
+| `UI.QA.literalQuestionAndVisibilityBoundary` | Question text renders as literal text, and the app discloses that room participants can read unlabeled questions. | Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy. |   ✅   |
+| `UI.QA.literalQuestionAndVisibilityBoundary` | Question text renders as literal text, and the app discloses that room participants can read unlabeled questions. | Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy. |   ✅   |
+| `UI.QA.literalQuestionAndVisibilityBoundary` | Question text renders as literal text, and the app discloses that room participants can read unlabeled questions. | Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy. |   ✅   |
 
 ## Evidence
 
@@ -44,8 +47,8 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "pubkeyA": "4388d6d24880b6872397f9c2f4d975a7003f3498ba27ba9245bcd7c57088f7df",
-  "pubkeyB": "4388d6d24880b6872397f9c2f4d975a7003f3498ba27ba9245bcd7c57088f7df"
+  "pubkeyA": "67a2ecc5bc5f45ffa3831f9fac7cfb9cac99eab33457660d6f909481a24ab68a",
+  "pubkeyB": "67a2ecc5bc5f45ffa3831f9fac7cfb9cac99eab33457660d6f909481a24ab68a"
 }
 ```
 
@@ -53,8 +56,8 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "pubkeyA": "32404c1184c3c37b",
-  "pubkeyB": "042ba3a3be285b66"
+  "pubkeyA": "54923fa8d9262b42",
+  "pubkeyB": "bc2c3996c8336c04"
 }
 ```
 
@@ -71,8 +74,8 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "plantedExpiresAt": 1787718880317,
-  "now": 1787718940320
+  "plantedExpiresAt": 1787720436631,
+  "now": 1787720496634
 }
 ```
 
@@ -80,8 +83,8 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "realPubkey": "c679708dbb6dc325",
-  "forgerPubkey": "f2a18fa4c12066a2"
+  "realPubkey": "da60eec23a0c8b53",
+  "forgerPubkey": "e1365501e5d7e23a"
 }
 ```
 
@@ -99,7 +102,7 @@ Selected captured evidence (full payloads in `security-audit.json`):
 ```json
 {
   "sigLen": 128,
-  "pubkeyPrefix": "418aaceeb3107570"
+  "pubkeyPrefix": "ba2241d01e301da1"
 }
 ```
 
@@ -107,7 +110,7 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "fingerprint": "72-4f-3d-69"
+  "fingerprint": "ef-a1-b5-13"
 }
 ```
 
@@ -115,7 +118,7 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "peerId": "2689c94b4009b02a"
+  "peerId": "006fa30ee63fe9ed"
 }
 ```
 
@@ -124,7 +127,7 @@ Selected captured evidence (full payloads in `security-audit.json`):
 ```json
 {
   "peerId": "alice",
-  "pubkeyPrefix": "68f4019dc8d6dcce",
+  "pubkeyPrefix": "b48f4d729a60fe0f",
   "sigLen": 128
 }
 ```
@@ -133,8 +136,44 @@ Selected captured evidence (full payloads in `security-audit.json`):
 
 ```json
 {
-  "forgedPubkey": "b479ed0f442ef5de",
-  "realPubkey": "b4056824634b3994"
+  "forgedPubkey": "1c18e222a3db0457",
+  "realPubkey": "2a45bef1a08610f2"
+}
+```
+
+### `UI.QA.literalQuestionAndVisibilityBoundary`
+
+```json
+{
+  "renderedLiteral": true,
+  "injectedImageCount": 0,
+  "payloadExecuted": false,
+  "dialogs": 0,
+  "boundaryCopyVisible": true
+}
+```
+
+### `UI.QA.literalQuestionAndVisibilityBoundary`
+
+```json
+{
+  "renderedLiteral": true,
+  "injectedImageCount": 0,
+  "payloadExecuted": false,
+  "dialogs": 0,
+  "boundaryCopyVisible": true
+}
+```
+
+### `UI.QA.literalQuestionAndVisibilityBoundary`
+
+```json
+{
+  "renderedLiteral": true,
+  "injectedImageCount": 0,
+  "payloadExecuted": false,
+  "dialogs": 0,
+  "boundaryCopyVisible": true
 }
 ```
 

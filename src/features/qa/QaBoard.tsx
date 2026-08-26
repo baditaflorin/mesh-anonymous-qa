@@ -54,11 +54,6 @@ export function rankQuestions(
     });
 }
 
-function connectionLabel(count: number): string {
-  if (count <= 0) return "Awareness pending";
-  return `${count} live ${count === 1 ? "connection" : "connections"}`;
-}
-
 function questionCountLabel(count: number): string {
   return `${count} ${count === 1 ? "question" : "questions"}`;
 }
@@ -74,7 +69,6 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
   const [armed, setArmed] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [voteMap, setVoteMap] = useState<Map<string, 1 | -1>>(new Map());
-  const [awarenessCount, setAwarenessCount] = useState(0);
   const [draft, setDraft] = useState("");
 
   const room = useMemo<RoomSync | null>(() => {
@@ -106,16 +100,10 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
       votes.forEach((value, key) => next.set(key, value));
       setVoteMap(next);
     };
-    const refreshAwareness = () => {
-      setAwarenessCount(room.provider?.awareness.getStates().size ?? 0);
-    };
-
     refreshQuestions();
     refreshVotes();
-    refreshAwareness();
     questionArray.observeDeep(refreshQuestions);
     votes.observe(refreshVotes);
-    room.provider?.awareness.on("change", refreshAwareness);
 
     const onMarkAll = () => {
       const items = questionArray.toArray();
@@ -153,7 +141,6 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
     return () => {
       questionArray.unobserveDeep(refreshQuestions);
       votes.unobserve(refreshVotes);
-      room.provider?.awareness.off("change", refreshAwareness);
       window.removeEventListener("qa:mark-all-answered", onMarkAll);
       window.removeEventListener("qa:clear-answered", onClearAnswered);
     };
@@ -242,13 +229,8 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
           </p>
         </div>
         <div className="qa-room-status" aria-label="Room status">
-          <MeshStatusPill
-            tone={awarenessCount > 0 ? "live" : "warning"}
-            dot
-            announce="polite"
-            data-qa-awareness-count={awarenessCount}
-          >
-            {connectionLabel(awarenessCount)}
+          <MeshStatusPill tone="info" data-qa-room-scope="shared-room">
+            Shared room
           </MeshStatusPill>
           <MeshStatusPill tone="info">{questionCountLabel(questions.length)}</MeshStatusPill>
           <span className="qa-mode-note">Local role · {mode}</span>

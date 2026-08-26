@@ -8,12 +8,14 @@ const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.ur
 const storagePrefix = pkg.name;
 
 /**
- * Generic mesh-presence test — works for any mesh-* app without modification.
+ * Generic shared-room test — works for any mesh-* app without modification.
  * Opens two pages in the same browser context so y-webrtc's BroadcastChannel
  * fallback syncs them with no signaling server / no network.
  *
- * Apps that show a peer count in the UI should pass this. Apps that don't
- * surface peer count can override or skip this test.
+ * The app intentionally does not make a numeric participant claim from an
+ * awareness map: BroadcastChannel and transport timing do not constitute a
+ * reliable roster. This asserts that the honest shared-room label survives a
+ * real two-peer room instead.
  */
 test("two peers in the same room can both open the real shared workspace", async ({
   browser,
@@ -29,8 +31,11 @@ test("two peers in the same room can both open the real shared workspace", async
     ]);
     await expect(a.getByRole("heading", { name: "Room queue" })).toBeVisible();
     await expect(b.getByRole("heading", { name: "Room queue" })).toBeVisible();
-    await expect(a.locator("[data-qa-awareness-count]")).toBeVisible();
-    await expect(b.locator("[data-qa-awareness-count]")).toBeVisible();
+    for (const page of [a, b]) {
+      await expect(page.locator("[data-qa-room-scope='shared-room']")).toHaveText("Shared room");
+      await expect(page.locator("[data-qa-awareness-count]")).toHaveCount(0);
+      await expect(page.getByText(/\\d+ live connections?/i)).toHaveCount(0);
+    }
   } finally {
     await cleanup();
   }

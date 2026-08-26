@@ -10,7 +10,7 @@ Anyone who joins the same room can receive the shared Yjs state, including:
 - Whether a question is marked covered.
 - The current net vote score and the vote-map entries.
 - The browser-local voter UUID inside each vote key (`<questionId>:<voterId>`). It is linkable across that browser’s votes in the room.
-- Yjs/y-webrtc awareness state used to count current connections.
+- This app deliberately does not show a numeric participant or connection count. Browser awareness is useful for transport coordination, but it is not a reliable roster across all peer paths and timing states.
 
 The question record is exactly `{ id, text, ts, answered }`; it has **no author field** and the app does not write the voter UUID alongside question text. That is a narrow data-model property, not a promise that a determined participant cannot infer authorship from timing, network observations, screen context, or altered clients.
 
