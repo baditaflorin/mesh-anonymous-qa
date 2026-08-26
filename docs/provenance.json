@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
   "app": "mesh-anonymous-qa",
-  "sourceCommit": "b219cca17441dcea2d24d39716b961693bd4cd50",
-  "releaseCommit": "b219cca17441dcea2d24d39716b961693bd4cd50",
-  "recordedAt": "2026-08-26T05:01:14Z"
+  "sourceCommit": "25389d6353d4232f82ad935c6a46ad5d491f899a",
+  "releaseCommit": "25389d6353d4232f82ad935c6a46ad5d491f899a",
+  "meshCommonCommit": "025f7ff72e50c4b54a3f4a2d8c88f4f600dec78f",
+  "recordedAt": "2026-08-26T17:26:37Z"
 }
