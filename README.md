@@ -1,79 +1,75 @@
-# mesh-anonymous-qa
+# Open Floor
 
-[![Live](https://img.shields.io/badge/live-baditaflorin.github.io%2Fmesh--anonymous--qa-3aa0ff?style=flat-square)](https://baditaflorin.github.io/mesh-anonymous-qa/)
+[![Live](https://img.shields.io/badge/live-Open%20Floor-94ddd2?style=flat-square)](https://baditaflorin.github.io/mesh-anonymous-qa/)
 [![Version](https://img.shields.io/github/package-json/v/baditaflorin/mesh-anonymous-qa?style=flat-square&color=7886a3)](https://github.com/baditaflorin/mesh-anonymous-qa/blob/main/package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![No backend](https://img.shields.io/badge/backend-none-0d0f15?style=flat-square)](docs/adr/0001-deployment-mode.md)
+[![Woodpecker](https://img.shields.io/badge/CI-Woodpecker-6fba82?style=flat-square)](https://ci.0exec.com/)
 
-> Peer-to-peer browser mesh for audience Q&A. Submit anonymously, upvote others, presenter answers from the top. Free replacement for Slido and Mentimeter Q&A.
+> A calm, facilitated question room for the people sharing a session. Ask, vote, and mark what the room has covered.
 
 **Live:** https://baditaflorin.github.io/mesh-anonymous-qa/
 
-Open the link on every audience phone and the presenter laptop. Pick a room. Audience submits questions and votes; presenter sees the same list sorted by votes and marks each one answered as they take it on stage. No login, no signup, no third-party server.
+Open the same room on the audience’s phones and the facilitator’s screen. Questions arrive in a shared queue, rise by vote, and stay visible when covered so late joiners keep context.
 
-## How it works
+## A precise visibility boundary
 
-- Every phone joins a shared **Yjs document** over **y-webrtc** via my [self-hosted signaling server](https://github.com/baditaflorin/signaling-server).
-- Questions are a `Y.Array<{id, text, ts, answered}>`. Submissions push onto the array; everyone sees them within ~100 ms.
-- Votes are a flat `Y.Map<"<questionId>:<voterId>", 1|-1>`. Each phone has a persisted `crypto.randomUUID()` as its voter identity. Net score per question is the sum of values.
-- Marking answered toggles `answered: true` on a question. Answered questions stay visible (struck through) so late joiners see what's already covered.
-- A "Clear answered" action in Settings hard-deletes the answered ones when the list gets long.
+Questions are stored **without an author label** in this app’s shared Yjs document. That does not make their text private or secret: everyone who joins the room can read it, and people with access to the shared state can inspect it. Do not include names or sensitive details.
 
-## Privacy threat model
+Votes use a browser-local UUID so repeated votes from the same browser can be toggled rather than stacked. That UUID is linkable within the shared vote data; it is not an account or a proof of personhood. See the full [privacy threat model](docs/privacy.md).
 
-See [docs/privacy.md](docs/privacy.md). Question text is anonymous in transit (no author tag in the CRDT). Votes are linkable per browser (so the same person can't multi-vote) but not to any external identity. A determined user can clear `localStorage` to multi-vote; acceptable for informal use.
+## How the room works
 
-## Architecture
+- Every participant joins one shared **Yjs document** through **y-webrtc**. The app uses a self-hosted signaling endpoint and may use TURN for difficult network paths.
+- Questions are the real shared `Y.Array<{ id, text, ts, answered }>`; records intentionally contain no author field.
+- Votes are the real shared `Y.Map<"<questionId>:<voterId>", 1 | -1>`. Their net score is calculated from those values.
+- Facilitator mode changes the controls on that browser. It is **not** an access-control boundary: another participant can select the same mode in Settings.
+- “Mark all covered” and “Clear covered” write to the shared room for all current and later participants.
 
-- **Mode A** — pure GitHub Pages, zero backend at runtime. ([ADR 0001](docs/adr/0001-deployment-mode.md))
-- **WebRTC transport** — Yjs + y-webrtc, with a self-hosted signaling server and TURN relay you can swap from the Settings drawer.
-- **No GitHub Actions** — the `docs/` directory is the built site, committed directly. Pre-push hooks gate formatting, typecheck, and a build smoke test.
-
-## Run it locally
+## Run locally
 
 ```bash
 git clone https://github.com/baditaflorin/mesh-anonymous-qa.git
+git clone https://github.com/baditaflorin/mesh-common.git
 cd mesh-anonymous-qa
-npm install
+npm ci
 npm run dev
 ```
 
-## Self-hosted infrastructure
-
-| Repo                                                                   | Endpoint                               | Role                        |
-| ---------------------------------------------------------------------- | -------------------------------------- | --------------------------- |
-| [signaling-server](https://github.com/baditaflorin/signaling-server)   | `wss://turn.0docker.com/ws`            | y-webrtc protocol fan-out   |
-| [turn-token-server](https://github.com/baditaflorin/turn-token-server) | `https://turn.0docker.com/credentials` | HMAC TURN creds, 1-hour TTL |
-| [coturn-hetzner](https://github.com/baditaflorin/coturn-hetzner)       | `turn:turn.0docker.com:3479`           | TURN relay                  |
-
-All three are mine. Override them from the in-app Settings drawer if you want to use your own.
-
-## Settings (in-app)
-
-- **Room ID** — phones must share one to see each other.
-- **Mode** — `audience` (default) for submitting and voting, `presenter` for marking answered with big-text view.
-- **Mark all answered** — moderator action, marks every outstanding question answered.
-- **Clear answered** — moderator action, permanently deletes every answered question.
-- **Signaling URL** / **TURN credentials URL** — override defaults.
-
-All persisted to `localStorage`.
-
-## ADRs
-
-- [0001 — Deployment mode (Mode A, pure Pages)](docs/adr/0001-deployment-mode.md)
-- [0002 — Vote dedup via persisted peer ID](docs/adr/0002-vote-dedup.md)
-- [0003 — Answered persists, doesn't delete](docs/adr/0003-answered-state.md)
-- [0010 — GitHub Pages publishing strategy](docs/adr/0010-pages-publishing.md)
-
-## Local hooks (no GitHub Actions)
+## Verification
 
 ```bash
-git config core.hooksPath .githooks
+npm run fmt:check
+npm run typecheck
+npm run test:unit
+npm run test:e2e
+npm run smoke
+npm run screenshot
+npm run demo
+npm run audit:security
 ```
 
-- **pre-commit** — `prettier --check` + `tsc --noEmit`
-- **commit-msg** — Conventional Commits validator
-- **pre-push** — runs `scripts/smoke.sh` (build + sanity-check `docs/`)
+The release checks the actual two-peer question → vote → covered workflow, keyboard labels, 390×844 and 1141×602 layouts, a five-second leak pass, a screenshot, and a two-peer recording. CI runs in the self-hosted Woodpecker fleet; this repository intentionally has no GitHub Actions workflow.
+
+## Infrastructure
+
+| Service          | Default endpoint                       | Purpose                                                   |
+| ---------------- | -------------------------------------- | --------------------------------------------------------- |
+| Signaling        | `wss://turn.0docker.com/ws`            | y-webrtc peer discovery and WebRTC signaling relay        |
+| TURN credentials | `https://turn.0docker.com/credentials` | short-lived relay credentials                             |
+| TURN relay       | `turn:turn.0docker.com:3479`           | fallback transport for peers that cannot connect directly |
+
+The endpoints can be changed from Settings on this device. Changing them does not alter the room’s visibility boundary or add access control.
+
+## Release artifacts
+
+After each release, the live Pages site exposes a [screenshot](https://baditaflorin.github.io/mesh-anonymous-qa/screenshot.png), [two-peer preview](https://baditaflorin.github.io/mesh-anonymous-qa/preview.png), [GIF recording](https://baditaflorin.github.io/mesh-anonymous-qa/demo.gif), and [security audit](https://baditaflorin.github.io/mesh-anonymous-qa/security-audit.md).
+
+## Design records
+
+- [Deployment mode](docs/adr/0001-deployment-mode.md)
+- [Vote deduplication](docs/adr/0002-vote-dedup.md)
+- [Answered-state retention](docs/adr/0003-answered-state.md)
+- [Pages publishing](docs/adr/0010-pages-publishing.md)
 
 ## License
 

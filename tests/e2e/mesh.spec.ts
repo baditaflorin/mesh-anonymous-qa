@@ -15,16 +15,22 @@ const storagePrefix = pkg.name;
  * Apps that show a peer count in the UI should pass this. Apps that don't
  * surface peer count can override or skip this test.
  */
-test("two peers in the same room can both load", async ({ browser, baseURL }) => {
+test("two peers in the same room can both open the real shared workspace", async ({
+  browser,
+  baseURL,
+}) => {
   const { a, b, cleanup } = await openTwoPeers(browser, baseURL ?? "", { storagePrefix });
   try {
-    await expect(a.locator(".mesh-self-ref, .self-ref").first()).toBeVisible();
-    await expect(b.locator(".mesh-self-ref, .self-ref").first()).toBeVisible();
-    // Both should reach a non-loading state within the timeout — most apps
-    // either show a count, a heading, or a primary control. We assert that
-    // at least one <h1> is present on both pages.
-    await expect(a.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    await expect(b.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    await expect(a.getByRole("heading", { name: "Let the room ask." })).toBeVisible();
+    await expect(b.getByRole("heading", { name: "Let the room ask." })).toBeVisible();
+    await Promise.all([
+      a.getByRole("button", { name: "Open this question room" }).click(),
+      b.getByRole("button", { name: "Open this question room" }).click(),
+    ]);
+    await expect(a.getByRole("heading", { name: "Room queue" })).toBeVisible();
+    await expect(b.getByRole("heading", { name: "Room queue" })).toBeVisible();
+    await expect(a.locator("[data-qa-awareness-count]")).toBeVisible();
+    await expect(b.locator("[data-qa-awareness-count]")).toBeVisible();
   } finally {
     await cleanup();
   }
