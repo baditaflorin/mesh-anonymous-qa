@@ -2,6 +2,7 @@ import { createMeshConfig } from "@baditaflorin/mesh-common";
 
 export const appConfig = createMeshConfig({
   appName: "mesh-anonymous-qa",
+  breadcrumbs: false,
   displayName: "Open Floor",
   visualProfile: "gather",
   shellLayout: "inset",
