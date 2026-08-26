@@ -59,6 +59,10 @@ function connectionLabel(count: number): string {
   return `${count} live ${count === 1 ? "connection" : "connections"}`;
 }
 
+function questionCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "question" : "questions"}`;
+}
+
 function questionTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
@@ -246,7 +250,7 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
           >
             {connectionLabel(awarenessCount)}
           </MeshStatusPill>
-          <MeshStatusPill tone="info">{questions.length} questions</MeshStatusPill>
+          <MeshStatusPill tone="info">{questionCountLabel(questions.length)}</MeshStatusPill>
           <span className="qa-mode-note">Local role · {mode}</span>
         </div>
       </header>
@@ -332,7 +336,10 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
               <p className="qa-panel-kicker">Shared queue</p>
               <h2 id="qa-queue-title">What the room wants to cover</h2>
             </div>
-            <span className="qa-queue-count" aria-label={`${questions.length} questions in queue`}>
+            <span
+              className="qa-queue-count"
+              aria-label={`${questionCountLabel(questions.length)} in queue`}
+            >
               {questions.length}
             </span>
           </header>
