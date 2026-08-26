@@ -1,8 +1,8 @@
 {
   "app": "mesh-anonymous-qa",
-  "completedAt": "2026-08-26T04:35:40.323Z",
-  "totalChecks": 17,
-  "passed": 17,
+  "completedAt": "2026-08-26T05:01:36.637Z",
+  "totalChecks": 20,
+  "passed": 20,
   "failed": 0,
   "entries": [
     {
@@ -10,22 +10,22 @@
       "claim": "Identity key persists across reloads via localStorage",
       "method": "loadOrCreateIdentity called twice with same prefix; both keypairs match",
       "evidence": {
-        "pubkeyA": "4388d6d24880b6872397f9c2f4d975a7003f3498ba27ba9245bcd7c57088f7df",
-        "pubkeyB": "4388d6d24880b6872397f9c2f4d975a7003f3498ba27ba9245bcd7c57088f7df"
+        "pubkeyA": "67a2ecc5bc5f45ffa3831f9fac7cfb9cac99eab33457660d6f909481a24ab68a",
+        "pubkeyB": "67a2ecc5bc5f45ffa3831f9fac7cfb9cac99eab33457660d6f909481a24ab68a"
       },
       "result": "pass",
-      "ts": 1787718940227
+      "ts": 1787720496532
     },
     {
       "id": "L1.IDENTITY.uniquePerApp",
       "claim": "Each storagePrefix produces a distinct keypair (no cross-app reuse)",
       "method": "loadOrCreateIdentity with two different prefixes; private keys differ",
       "evidence": {
-        "pubkeyA": "32404c1184c3c37b",
-        "pubkeyB": "042ba3a3be285b66"
+        "pubkeyA": "54923fa8d9262b42",
+        "pubkeyB": "bc2c3996c8336c04"
       },
       "result": "pass",
-      "ts": 1787718940229
+      "ts": 1787720496533
     },
     {
       "id": "L1.MODERATOR.claimSyncs",
@@ -36,36 +36,36 @@
         "ttlMs": 1800000
       },
       "result": "pass",
-      "ts": 1787718940282
+      "ts": 1787720496587
     },
     {
       "id": "L1.MODERATOR.expiredClaimIgnored",
       "claim": "A signed claim with expiresAt in the past is treated as vacant",
       "method": "Plant claim with expiresAt = now - 60s; hook reports current=null",
       "evidence": {
-        "plantedExpiresAt": 1787718880317,
-        "now": 1787718940320
+        "plantedExpiresAt": 1787720436631,
+        "now": 1787720496634
       },
       "result": "pass",
-      "ts": 1787718940320
+      "ts": 1787720496634
     },
     {
       "id": "L1.MODERATOR.forgedClaimRejected",
       "claim": "A claim with a signature not matching its embedded pubkey is treated as vacant",
       "method": "Plant {pubkey:real, sig:forger}; hook rejects and reports current=null",
       "evidence": {
-        "realPubkey": "c679708dbb6dc325",
-        "forgerPubkey": "f2a18fa4c12066a2"
+        "realPubkey": "da60eec23a0c8b53",
+        "forgerPubkey": "e1365501e5d7e23a"
       },
       "result": "pass",
-      "ts": 1787718940323
+      "ts": 1787720496637
     },
     {
       "id": "L1.MODERATOR.releaseSyncs",
       "claim": "Relinquish by the current moderator clears the slot for all peers",
       "method": "After A.relinquish() both A and B observe current=null",
       "result": "pass",
-      "ts": 1787718940316
+      "ts": 1787720496630
     },
     {
       "id": "L1.MODERATOR.signedClaim",
@@ -76,35 +76,35 @@
         "nonceLen": 32
       },
       "result": "pass",
-      "ts": 1787718940291
+      "ts": 1787720496596
     },
     {
       "id": "L1.MODERATOR.vacantDefault",
       "claim": "Fresh room reports no moderator and isMe=false",
       "method": "useModerator hook on a fresh mock room returns {current:null, isMe:false}",
       "result": "pass",
-      "ts": 1787718940263
+      "ts": 1787720496567
     },
     {
       "id": "L1.SIGN.rejectGarbage",
       "claim": "Invalid signature / pubkey inputs return false instead of crashing",
       "method": "verify({x:1}, 'not-hex', 'also-bad') and verify({x:1}, '', '') both false",
       "result": "pass",
-      "ts": 1787718940242
+      "ts": 1787720496546
     },
     {
       "id": "L1.SIGN.rejectTampered",
       "claim": "A signed payload with any byte modified fails verification",
       "method": "Sign {msg:'hello'}, then verify({msg:'HELLO'}, …) returns false",
       "result": "pass",
-      "ts": 1787718940238
+      "ts": 1787720496542
     },
     {
       "id": "L1.SIGN.rejectWrongKey",
       "claim": "A's signature does not verify under B's public key",
       "method": "Sign with kpA.priv, verify with kpB.pub returns false",
       "result": "pass",
-      "ts": 1787718940241
+      "ts": 1787720496546
     },
     {
       "id": "L1.SIGN.roundtrip",
@@ -112,30 +112,30 @@
       "method": "Ed25519 sign(payload, privkey) then verify(payload, sig, pubkey)",
       "evidence": {
         "sigLen": 128,
-        "pubkeyPrefix": "418aaceeb3107570"
+        "pubkeyPrefix": "ba2241d01e301da1"
       },
       "result": "pass",
-      "ts": 1787718940233
+      "ts": 1787720496537
     },
     {
       "id": "L1.TOFU.fingerprint",
       "claim": "trustFingerprint emits a 4x2-hex grouped string for in-person verification",
       "method": "fingerprint(peerId, pubkey) matches /^xx-xx-xx-xx$/",
       "evidence": {
-        "fingerprint": "72-4f-3d-69"
+        "fingerprint": "ef-a1-b5-13"
       },
       "result": "pass",
-      "ts": 1787718940243
+      "ts": 1787720496547
     },
     {
       "id": "L1.TOFU.peerIdFromPubkey",
       "claim": "peerIdFromPubkey is deterministic and uses 64-bit prefix of pubkey",
       "method": "Two calls with same pubkey return the same 16-hex-char id",
       "evidence": {
-        "peerId": "2689c94b4009b02a"
+        "peerId": "006fa30ee63fe9ed"
       },
       "result": "pass",
-      "ts": 1787718940242
+      "ts": 1787720496546
     },
     {
       "id": "L1.TOFU.register",
@@ -143,22 +143,22 @@
       "method": "Verify the stored record's signature against its own pubkey",
       "evidence": {
         "peerId": "alice",
-        "pubkeyPrefix": "68f4019dc8d6dcce",
+        "pubkeyPrefix": "b48f4d729a60fe0f",
         "sigLen": 128
       },
       "result": "pass",
-      "ts": 1787718940256
+      "ts": 1787720496560
     },
     {
       "id": "L1.TOFU.rejectImposter",
       "claim": "A forged record signed by the wrong key does not block the real peer from publishing",
       "method": "Pre-write mallory-signed alice claim; alice arrives and overwrites with her own",
       "evidence": {
-        "forgedPubkey": "b479ed0f442ef5de",
-        "realPubkey": "b4056824634b3994"
+        "forgedPubkey": "1c18e222a3db0457",
+        "realPubkey": "2a45bef1a08610f2"
       },
       "result": "pass",
-      "ts": 1787718940262
+      "ts": 1787720496566
     },
     {
       "id": "UI.QA.literalQuestionAndVisibilityBoundary",
@@ -172,6 +172,48 @@
         "boundaryCopyVisible": true
       },
       "ts": 1787718948268,
+      "result": "pass"
+    },
+    {
+      "id": "UI.QA.literalQuestionAndVisibilityBoundary",
+      "claim": "Question text renders as literal text, and the app discloses that room participants can read unlabeled questions.",
+      "method": "Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy.",
+      "evidence": {
+        "renderedLiteral": true,
+        "injectedImageCount": 0,
+        "payloadExecuted": false,
+        "dialogs": 0,
+        "boundaryCopyVisible": true
+      },
+      "ts": 1787720318853,
+      "result": "pass"
+    },
+    {
+      "id": "UI.QA.literalQuestionAndVisibilityBoundary",
+      "claim": "Question text renders as literal text, and the app discloses that room participants can read unlabeled questions.",
+      "method": "Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy.",
+      "evidence": {
+        "renderedLiteral": true,
+        "injectedImageCount": 0,
+        "payloadExecuted": false,
+        "dialogs": 0,
+        "boundaryCopyVisible": true
+      },
+      "ts": 1787720483915,
+      "result": "pass"
+    },
+    {
+      "id": "UI.QA.literalQuestionAndVisibilityBoundary",
+      "claim": "Question text renders as literal text, and the app discloses that room participants can read unlabeled questions.",
+      "method": "Submitted an image/onerror payload through the actual shared Yjs question flow; asserted no image node, no executed payload, no dialog, and visible boundary copy.",
+      "evidence": {
+        "renderedLiteral": true,
+        "injectedImageCount": 0,
+        "payloadExecuted": false,
+        "dialogs": 0,
+        "boundaryCopyVisible": true
+      },
+      "ts": 1787720504613,
       "result": "pass"
     }
   ]
