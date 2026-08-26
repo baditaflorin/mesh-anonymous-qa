@@ -1,43 +1,42 @@
-# Privacy threat model — mesh-anonymous-qa
+# Open Floor — visibility and privacy boundary
 
-## What other peers in the same room can see
+Open Floor is a shared-room tool, not a private inbox or a secure anonymity system. This page describes the data the app writes and the limits of its claims.
 
-- The full text of every question submitted to the room.
-- The net vote score on every question.
-- Your **voter UUID** (a `crypto.randomUUID()` persisted to `localStorage`) attached to every vote you cast. The UUID is not tied to your name, IP, or device — but two votes from the same UUID are linkable to each other.
-- Your Yjs awareness `clientID` — a per-session 32-bit random integer regenerated on every page load.
+## What room participants can read
 
-The question text itself is **not** signed or tagged with the author's voter UUID, so question submissions are stronger-anonymous than votes.
+Anyone who joins the same room can receive the shared Yjs state, including:
 
-## What stays local
+- The complete text and timestamp of every question.
+- Whether a question is marked covered.
+- The current net vote score and the vote-map entries.
+- The browser-local voter UUID inside each vote key (`<questionId>:<voterId>`). It is linkable across that browser’s votes in the room.
+- Yjs/y-webrtc awareness state used to count current connections.
 
-- Your voter UUID (used for dedup).
-- Your room ID and mode (audience / presenter).
-- Self-hosted infra overrides.
+The question record is exactly `{ id, text, ts, answered }`; it has **no author field** and the app does not write the voter UUID alongside question text. That is a narrow data-model property, not a promise that a determined participant cannot infer authorship from timing, network observations, screen context, or altered clients.
 
-## What the signaling server sees
+## What stays on this browser
 
-`signaling-server` (mine, source at https://github.com/baditaflorin/signaling-server) sees:
+- The room selection and local role (`audience` or `presenter`).
+- The voter UUID before it is used in a vote. Once used, that UUID becomes part of shared vote-map keys.
+- Locally configured signaling and TURN endpoint overrides.
 
-- The **room name** (`mesh-anonymous-qa:<roomId>`).
-- Encrypted **SDP** offer/answer blobs being relayed between peers.
-- The IP address of the peer making the WebSocket connection.
+Changing to facilitator mode is not authorization. The role only changes this browser’s UI; other participants can choose the same role and write equivalent shared-state changes.
 
-It does **not** see question text or votes — those flow peer-to-peer over WebRTC DataChannel.
+## Network services involved
 
-## What the TURN server sees
+The app contacts the configured signaling endpoint to establish WebRTC sessions and may contact the configured TURN credential endpoint and relay. Those services can observe the network requests and connection metadata they receive, including IP addresses at their respective endpoints. The signaling service is given the room name used by y-webrtc (`mesh-anonymous-qa:<roomId>`).
 
-`coturn-hetzner` (mine, source at https://github.com/baditaflorin/coturn-hetzner) relays encrypted WebRTC media/data when peers cannot connect directly. It sees:
+WebRTC data channels use browser WebRTC transport security, but that does not make the room’s shared data secret from room participants. This app makes no claim of end-to-end identity verification, content access control, or protection from a malicious participant/client.
 
-- The IP addresses of the two peers being relayed.
-- Encrypted DTLS-SRTP / DataChannel bytes. It cannot decrypt them.
+## Permissions
 
-## Permissions asked
+Open Floor does not request camera, microphone, motion, notification, or location permissions.
 
-None. No camera, microphone, motion, or notification permissions.
+## Out of scope
 
-## What's NOT in the threat model
+- **Strong anonymity or authorship protection.** Do not use this app for whistleblowing, sensitive disclosures, or situations where identity inference matters.
+- **Sybil resistance.** Clearing browser storage or using another browser can create a new voter UUID and vote again.
+- **Moderator access control.** Facilitator controls are a convention for the group, not an enforced role.
+- **Retention guarantees.** Participants can keep copies of shared state; clearing questions only removes them from the current shared document going forward.
 
-- **Sybil resistance.** A user can clear `localStorage` (or use a private window) and vote again. See ADR 0002 — acceptable trade-off for informal use.
-- **Network observers.** On a hostile Wi-Fi, the network owner can see the WebSocket connection to `turn.0docker.com` and a relay flow to whatever TURN port you negotiate. They cannot decrypt the contents.
-- **Question authorship correlation.** A peer with packet-inspection tools could correlate Yjs CRDT writes with awareness clientIDs and an IP address, defeating the "anonymous question" property. For a stronger threat model, route through Tor and accept the latency cost.
+For the current executable safety checks, see the published [security audit](security-audit.md) after a release.

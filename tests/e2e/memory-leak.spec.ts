@@ -55,16 +55,25 @@ test("memory leak — heap growth stays under budget over a long-running room", 
     b.goto(`/${APP_NAME}/`, { waitUntil: "domcontentloaded" }),
   ]);
 
+  await Promise.all([
+    a.getByRole("button", { name: "Open this question room" }).click(),
+    b.getByRole("button", { name: "Open this question room" }).click(),
+  ]);
+  const probe = `leak probe ${Date.now()}`;
+  await a.getByLabel("Your question").fill(probe);
+  await a.getByRole("button", { name: "Submit question" }).click();
+  await expect(b.locator(".qa-item", { hasText: probe })).toBeVisible({ timeout: 10_000 });
+
   // Settle the initial mount + first GC opportunity.
   await a.waitForTimeout(1500);
   const before = await measureHeap(a);
 
-  // Noise loop: click any visible button on both peers, sleep, repeat.
-  // The point is to provoke observer churn — exact action doesn't matter.
+  // Noise loop: toggle the actual shared vote on both peers. This exercises
+  // the Y.Map observer and cleanup path without opening an unrelated modal.
   const interval = Math.max(50, Math.floor(DURATION / NOISE_OPS));
   const deadline = Date.now() + DURATION;
   while (Date.now() < deadline) {
-    await Promise.all([clickAnything(a), clickAnything(b)]);
+    await Promise.all([toggleVote(a), toggleVote(b)]);
     await a.waitForTimeout(interval);
   }
   await a.waitForTimeout(1000);
@@ -95,8 +104,8 @@ async function measureHeap(page: import("@playwright/test").Page): Promise<numbe
   );
 }
 
-async function clickAnything(page: import("@playwright/test").Page): Promise<void> {
-  const btn = page.locator("button:not([disabled]):not([aria-disabled='true']):visible").first();
-  if ((await btn.count()) === 0) return;
-  await btn.click({ trial: false, timeout: 2000 }).catch(() => undefined);
+async function toggleVote(page: import("@playwright/test").Page): Promise<void> {
+  const button = page.getByRole("button", { name: /upvote question/i }).first();
+  if ((await button.count()) === 0) return;
+  await button.evaluate((element) => (element as HTMLButtonElement).click());
 }

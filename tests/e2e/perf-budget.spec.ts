@@ -70,9 +70,8 @@ test("perf budget — LCP + TBT under threshold on cold load", async ({ page }) 
 test("perf budget — INP under threshold after one interaction", async ({ page }) => {
   await page.goto(`/${APP_NAME}/`, { waitUntil: "domcontentloaded" });
 
-  // Pick whatever's clickable; the budget cares about *any* interaction's
-  // INP, not a specific feature. If nothing is clickable we pass trivially.
-  const button = page.locator("button:not([disabled]):not([aria-disabled='true']):visible").first();
+  // Measure the first real product action, not a shell control.
+  const button = page.getByRole("button", { name: "Open this question room" });
   if ((await button.count()) === 0) {
     test.info().annotations.push({ type: "skip", description: "no visible buttons" });
     return;

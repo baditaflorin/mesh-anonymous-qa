@@ -1,85 +1,73 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { openTwoPeers } from "@baditaflorin/mesh-common/testing";
-import { readFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
   name: string;
 };
 const storagePrefix = pkg.name;
 
+async function openRoom(page: import("@playwright/test").Page): Promise<void> {
+  await page.getByRole("button", { name: "Open this question room" }).click();
+  await expect(page.getByRole("heading", { name: "Room queue" })).toBeVisible();
+}
+
 /**
- * Load-bearing cross-peer test for the ADVERTISED core action:
- * "Submit anonymously, upvote others, presenter answers from the top."
- *
- * Drives the real advertised flow on peer A (audience submits a question +
- * upvotes it) and asserts the result propagates to peer B (presenter) over the
- * Yjs doc — then peer B (presenter) marks it answered and peer A sees the
- * struck-through "answered" state. This fails on any code where writes go to
- * React state instead of the shared Y.Array/Y.Map, or where peers read/write
- * different keys.
+ * Load-bearing shared workflow: it drives the actual Y.Array/Y.Map room,
+ * rather than a React-only optimistic view. The question crosses from one
+ * browser peer to another, its vote crosses back, and the facilitator writes
+ * the shared answered state.
  */
-test("submitted question + upvote + mark-answered propagate peer→peer", async ({
+test("question, vote, and covered state propagate across two real room peers", async ({
   browser,
   baseURL,
 }) => {
-  // Peer A defaults to audience; make peer B the presenter so the full
-  // submit → see → vote → answer round-trip crosses the mesh.
   const roomId = `e2e-${Math.random().toString(36).slice(2, 8)}`;
   const { a, b, cleanup, context } = await openTwoPeers(browser, baseURL ?? "", {
     storagePrefix,
     roomId,
   });
   try {
-    // Set B to presenter mode and reload so the radio takes effect.
+    // The local role is deliberately not authorization. It only changes B's
+    // controls, letting this test exercise the real shared covered write.
     await context.addInitScript(
-      ({ prefix }) => {
+      ({ prefix }: { prefix: string }) => {
         try {
           localStorage.setItem(`${prefix}:mode`, "presenter");
         } catch {
-          /* ignore */
+          /* private storage is not part of this test */
         }
       },
       { prefix: storagePrefix },
     );
     await b.reload();
 
-    // Arm both peers (the "Join room" gate).
-    await a.getByRole("button", { name: /join room/i }).click();
-    await b.getByRole("button", { name: /join room/i }).click();
+    await Promise.all([openRoom(a), openRoom(b)]);
+    await expect(b.getByText("Local role · presenter")).toBeVisible();
 
-    // Peer A (audience) submits an anonymous question.
-    const question = `What is the airspeed of a swallow ${roomId}?`;
-    await a.getByPlaceholder(/ask anything/i).fill(question);
-    await a.getByRole("button", { name: /^submit$/i }).click();
+    const question = `How should we prioritize the next release? ${roomId}`;
+    await a.getByLabel("Your question").fill(question);
+    await a.getByRole("button", { name: "Submit question" }).click();
 
-    // Peer B (presenter) sees the submitted question — the heart of the claim.
-    await expect(b.getByText(question)).toBeVisible({ timeout: 10000 });
-
-    // Peer A upvotes its own question; the net score must reach peer B.
     const aItem = a.locator(".qa-item", { hasText: question });
-    await aItem.getByRole("button", { name: /upvote/i }).click();
     const bItem = b.locator(".qa-item", { hasText: question });
-    await expect(bItem.locator(".qa-net")).toHaveText("1", { timeout: 10000 });
+    await expect(bItem).toBeVisible({ timeout: 10_000 });
+    await expect(bItem.getByText("author label not stored")).toBeVisible();
 
-    // Peer B (presenter) marks it answered; peer A must see the answered state.
-    await bItem.getByRole("button", { name: /mark answered/i }).click();
+    await aItem.getByRole("button", { name: /upvote question/i }).click();
+    await expect(aItem.locator(".qa-net")).toHaveText("1", { timeout: 10_000 });
+    await expect(bItem.locator(".qa-net")).toHaveText("1", { timeout: 10_000 });
+
+    await bItem.getByRole("button", { name: "Mark covered" }).click();
     await expect(a.locator(".qa-item", { hasText: question })).toHaveClass(/qa-answered/, {
-      timeout: 10000,
+      timeout: 10_000,
     });
   } finally {
     await cleanup();
   }
 });
 
-/**
- * Vote dedup is the load-bearing correctness claim that makes this a real Slido
- * replacement (README: "the same person can't multi-vote"). A voter's upvote is
- * keyed by `<questionId>:<voterId>`, so re-clicking the SAME button must not
- * stack a second vote — it toggles the single vote off. This drives the toggle
- * on peer A and asserts the bounded net score crosses the mesh to peer B both
- * ways (1 → 0), guarding against any regression that lets a tally run away.
- */
-test("re-clicking upvote toggles a single vote off, net stays bounded peer→peer", async ({
+test("a browser-local voter can only toggle one vote per question", async ({
   browser,
   baseURL,
 }) => {
@@ -89,30 +77,44 @@ test("re-clicking upvote toggles a single vote off, net stays bounded peer→pee
     roomId,
   });
   try {
-    await a.getByRole("button", { name: /join room/i }).click();
-    await b.getByRole("button", { name: /join room/i }).click();
+    await Promise.all([openRoom(a), openRoom(b)]);
 
-    const question = `dedup probe ${roomId}`;
-    await a.getByPlaceholder(/ask anything/i).fill(question);
-    await a.getByRole("button", { name: /^submit$/i }).click();
+    const question = `Vote toggle probe ${roomId}`;
+    await a.getByLabel("Your question").fill(question);
+    await a.getByRole("button", { name: "Submit question" }).click();
 
     const aItem = a.locator(".qa-item", { hasText: question });
     const bItem = b.locator(".qa-item", { hasText: question });
-    await expect(bItem).toBeVisible({ timeout: 10000 });
+    await expect(bItem).toBeVisible({ timeout: 10_000 });
 
-    const aUp = aItem.getByRole("button", { name: /upvote/i });
+    const upvote = aItem.getByRole("button", { name: /upvote question/i });
+    await upvote.click();
+    await expect(aItem.locator(".qa-net")).toHaveText("1", { timeout: 10_000 });
+    await expect(bItem.locator(".qa-net")).toHaveText("1", { timeout: 10_000 });
 
-    // One upvote → net 1 on both peers.
-    await aUp.click();
-    await expect(aItem.locator(".qa-net")).toHaveText("1", { timeout: 10000 });
-    await expect(bItem.locator(".qa-net")).toHaveText("1", { timeout: 10000 });
-
-    // Clicking the SAME upvote a second time must NOT make net 2 — it toggles
-    // the vote off (net 0). This is the anti-multi-vote guarantee.
-    await aUp.click();
-    await expect(aItem.locator(".qa-net")).toHaveText("0", { timeout: 10000 });
-    await expect(bItem.locator(".qa-net")).toHaveText("0", { timeout: 10000 });
+    await upvote.click();
+    await expect(aItem.locator(".qa-net")).toHaveText("0", { timeout: 10_000 });
+    await expect(bItem.locator(".qa-net")).toHaveText("0", { timeout: 10_000 });
   } finally {
     await cleanup();
   }
+});
+
+test("the room explains its visibility boundary and supports keyboard submission", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(page.locator("[data-qa-visibility='shared-room']")).toContainText(
+    "Questions are stored without an author label.",
+  );
+  await expect(page.locator("[data-qa-visibility='shared-room']")).toContainText(
+    "Everyone who joins this room can read them.",
+  );
+
+  await openRoom(page);
+  const question = "Can keyboard users submit a question?";
+  await page.getByLabel("Your question").fill(question);
+  await page.getByRole("button", { name: "Submit question" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".qa-item", { hasText: question })).toBeVisible();
 });

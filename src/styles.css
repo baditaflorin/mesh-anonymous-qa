@@ -1,11 +1,9 @@
 :root {
   color-scheme: dark;
-  --bg: #0d0f15;
-  --fg: #e9eef7;
-  --muted: #7886a3;
-  --accent: hsl(208, 90%, 62%);
-  --up: hsl(135, 60%, 55%);
-  --down: hsl(0, 60%, 60%);
+  --qa-ink: #071b25;
+  --qa-deep: #0a2430;
+  --qa-line: color-mix(in srgb, var(--mesh-border) 88%, transparent);
+  --qa-wash: color-mix(in srgb, var(--mesh-accent) 11%, transparent);
 }
 
 * {
@@ -15,352 +13,705 @@
 html,
 body,
 #root,
-.app-root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
+.mesh-shell-theme {
   width: 100%;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
 }
 
 body {
-  overscroll-behavior: none;
+  min-height: 100dvh;
+  background: var(--mesh-canvas, var(--qa-ink));
+  color: var(--mesh-text);
+  font-family: var(--mesh-font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.app-root {
-  position: relative;
-  min-height: 100%;
+/* This feature owns its actual Yjs awareness display below. The shell has no
+ * room object to report here, so do not imply a second lifecycle or force the
+ * framework name into the product bar. */
+.mesh-app-root[data-mesh-app-id="mesh-anonymous-qa"] .mesh-app-bar-eyebrow,
+.mesh-app-root[data-mesh-app-id="mesh-anonymous-qa"] .mesh-app-bar-state {
+  display: none;
 }
 
-/* Arm screen */
-.qa-arm {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-  background: radial-gradient(ellipse at top, #1a2236 0%, #0d0f15 80%);
-}
-
-.qa-arm h1 {
-  font-size: 1.7rem;
-  margin: 0 0 1rem;
-  color: var(--accent);
-  letter-spacing: 0.03em;
-}
-
-.qa-arm p {
-  max-width: 30rem;
-  color: var(--fg);
-  opacity: 0.85;
-  line-height: 1.5;
-  margin: 0 0 2rem;
-}
-
-.qa-arm-button {
-  font-size: 1.1rem;
-  padding: 1rem 2rem;
-  background: var(--accent);
-  color: #0d0f15;
-  border: none;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.qa-arm-button:active {
-  transform: scale(0.98);
-}
-
-.qa-hint {
-  margin-top: 1.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.qa-hint code {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
-}
-
-/* Active stage */
-.qa-stage {
-  position: relative;
-  min-height: 100%;
-  padding: max(env(safe-area-inset-top), 4rem) 1rem max(env(safe-area-inset-bottom), 3rem);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.qa-hud {
-  position: absolute;
-  top: max(env(safe-area-inset-top), 0.6rem);
-  left: 1rem;
-  display: flex;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.35em 0.8em;
-  border-radius: 999px;
-  backdrop-filter: blur(8px);
-}
-
-/* Compose */
-.qa-compose {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.75rem;
-}
-
-.qa-compose textarea {
-  resize: vertical;
-  min-height: 2.5rem;
+button,
+textarea {
   font: inherit;
-  background: #0d0f15;
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 0.6rem 0.7rem;
 }
 
-.qa-compose button {
-  align-self: flex-end;
-  padding: 0.6rem 1.4rem;
-  background: var(--accent);
-  color: #0d0f15;
-  border: none;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
+code {
+  padding: 0.13em 0.4em;
+  border: 1px solid color-mix(in srgb, var(--mesh-border) 76%, transparent);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--mesh-surface) 72%, transparent);
+  color: var(--mesh-text);
+  font-family: var(--mesh-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.88em;
 }
 
-.qa-compose button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.qa-entry {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 4%, rgb(148 221 210 / 16%), transparent 31rem),
+    radial-gradient(circle at 92% 100%, rgb(99 153 184 / 12%), transparent 29rem),
+    var(--mesh-canvas);
 }
 
-/* List */
-.qa-list {
-  list-style: none;
+.qa-launch.mesh-launch {
+  width: min(100%, 64rem);
+  height: 100%;
+  min-height: 0;
+  padding-inline: clamp(1.25rem, 7vw, 5.5rem);
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(115deg, rgb(7 27 37 / 88%), rgb(7 27 37 / 44%)),
+    radial-gradient(circle at 78% 22%, rgb(148 221 210 / 17%), transparent 22rem);
+  box-shadow: none;
+}
+
+.qa-launch .mesh-launch-content {
+  width: min(100%, 39rem);
+  gap: clamp(0.85rem, 2.4vh, 1.35rem);
+}
+
+.qa-launch .mesh-launch-header {
+  gap: 0.65rem;
+}
+
+.qa-launch .mesh-launch-eyebrow,
+.qa-overline,
+.qa-panel-kicker,
+.qa-note-kicker {
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  color: var(--mesh-accent);
+  font-size: 0.69rem;
+  font-weight: 780;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.qa-empty {
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.9rem;
-  padding: 2rem 1rem;
+.qa-launch .mesh-launch h1 {
+  max-width: 10ch;
+  font-size: clamp(3.15rem, 8.5vw, 5.8rem);
+  letter-spacing: -0.072em;
+  line-height: 0.88;
+}
+
+.qa-launch .mesh-launch-promise {
+  max-width: 33rem;
+  color: color-mix(in srgb, var(--mesh-text-muted) 90%, white);
+}
+
+.qa-launch .mesh-launch-presence {
+  color: var(--mesh-text-muted);
+}
+
+.qa-launch .mesh-launch-action-primary {
+  min-width: min(100%, 17rem);
+  box-shadow: 0 1rem 2.8rem rgb(15 112 104 / 22%);
+}
+
+.qa-visibility-note {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 35rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--mesh-accent) 36%, var(--mesh-border));
+  border-radius: 1rem;
+  background: rgb(7 27 37 / 38%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.qa-visibility-note p {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--mesh-text-muted);
+  font-size: 0.87rem;
+  line-height: 1.45;
+}
+
+.qa-visibility-note p + p {
+  color: color-mix(in srgb, var(--mesh-text-muted) 82%, var(--mesh-warning));
+}
+
+.qa-stage {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(0.65rem, 1.8vh, 1.15rem);
+  padding: clamp(0.55rem, 1.8vw, 1.25rem);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 1% 0%, rgb(148 221 210 / 10%), transparent 31rem), var(--mesh-canvas);
+}
+
+.qa-stage-header {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.15rem 0.2rem 0;
+}
+
+.qa-stage-title {
+  min-width: 0;
+}
+
+.qa-stage-title h1,
+.qa-panel-heading h2,
+.qa-queue-header h2 {
+  margin: 0;
+  color: var(--mesh-text);
+  letter-spacing: -0.045em;
+}
+
+.qa-stage-title h1 {
+  margin-top: 0.16rem;
+  font-size: clamp(1.9rem, 4vw, 3.2rem);
+  line-height: 0.98;
+}
+
+.qa-stage-title > p:last-child {
+  margin: 0.34rem 0 0;
+  color: var(--mesh-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.qa-room-status {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.45rem;
+  max-width: 31rem;
+}
+
+.qa-mode-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  color: var(--mesh-text-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.qa-workspace {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(18rem, 0.78fr) minmax(24rem, 1.22fr);
+  gap: clamp(0.75rem, 1.6vw, 1.15rem);
+}
+
+.qa-composer-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(1rem, 2.5vh, 1.75rem);
+  overflow: hidden;
+  background: linear-gradient(145deg, rgb(148 221 210 / 10%), transparent 56%), var(--mesh-surface);
+}
+
+.qa-panel-heading {
+  display: grid;
+  gap: 0.52rem;
+}
+
+.qa-panel-heading h2 {
+  font-size: clamp(1.45rem, 2.5vw, 2.2rem);
+  line-height: 1;
+}
+
+.qa-panel-heading > p:last-child {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--mesh-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.47;
+}
+
+.qa-compose {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.qa-question-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.qa-question-field label {
+  color: var(--mesh-text);
+  font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.qa-question-field .mesh-field-hint {
+  color: var(--mesh-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.38;
+}
+
+.qa-question-input {
+  width: 100%;
+  min-height: 6.75rem;
+  resize: vertical;
+  border: 1px solid var(--mesh-border);
+  border-radius: 0.9rem;
+  outline: none;
+  background: rgb(3 17 24 / 44%);
+  color: var(--mesh-text);
+  line-height: 1.45;
+  padding: 0.76rem 0.82rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.qa-question-input::placeholder {
+  color: color-mix(in srgb, var(--mesh-text-muted) 78%, transparent);
+}
+
+.qa-question-input:focus {
+  border-color: var(--mesh-accent);
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--mesh-accent) 22%, transparent);
+}
+
+.qa-compose-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.qa-character-count {
+  color: var(--mesh-text-muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.qa-facilitator-panel {
+  justify-content: flex-start;
+}
+
+.qa-facilitator-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: auto;
+}
+
+.qa-facilitator-summary span {
+  padding: 0.72rem 0.78rem;
+  border: 1px solid color-mix(in srgb, var(--mesh-border) 84%, transparent);
+  border-radius: 0.75rem;
+  background: rgb(3 17 24 / 26%);
+  color: var(--mesh-text-muted);
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.qa-queue-panel {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.qa-queue-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(0.9rem, 1.6vw, 1.2rem) clamp(0.95rem, 1.8vw, 1.4rem);
+  border-bottom: 1px solid var(--qa-line);
+}
+
+.qa-queue-header h2 {
+  margin-top: 0.28rem;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  line-height: 1.1;
+}
+
+.qa-queue-count {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--mesh-accent) 40%, var(--mesh-border));
+  border-radius: 999px;
+  background: var(--qa-wash);
+  color: var(--mesh-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.qa-list {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0.7rem;
+  overflow: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--mesh-text-muted) 50%, transparent) transparent;
 }
 
 .qa-item {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.8rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  align-items: stretch;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  gap: clamp(0.55rem, 1.3vw, 0.85rem);
+  align-items: center;
+  padding: 0.78rem;
+  border: 1px solid color-mix(in srgb, var(--mesh-border) 86%, transparent);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--mesh-surface) 92%, var(--mesh-canvas));
+  box-shadow: 0 0.5rem 1.15rem rgb(0 0 0 / 7%);
 }
 
 .qa-item.qa-answered {
-  opacity: 0.45;
-}
-
-.qa-item.qa-answered .qa-text {
-  text-decoration: line-through;
+  border-color: color-mix(in srgb, var(--mesh-border) 68%, transparent);
+  background: color-mix(in srgb, var(--mesh-surface) 72%, var(--mesh-canvas));
 }
 
 .qa-votes {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   align-items: center;
-  gap: 0.2rem;
-  min-width: 2.4rem;
+  justify-items: center;
+  gap: 0.02rem;
 }
 
-.qa-vote-btn {
+.qa-vote-button.mesh-button {
   width: 2rem;
-  height: 2rem;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--fg);
-  border-radius: 999px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 1.7rem;
+  padding: 0;
+  border-radius: 0.55rem;
+  color: var(--mesh-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
-.qa-vote-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.qa-vote-button.mesh-button:hover:not(:disabled),
+.qa-vote-button.mesh-button[aria-pressed="true"] {
+  color: var(--mesh-accent);
+  background: var(--qa-wash);
 }
 
-.qa-vote-btn.qa-up.qa-active {
-  background: var(--up);
-  color: #0d0f15;
-  border-color: var(--up);
-}
-
-.qa-vote-btn.qa-down.qa-active {
-  background: var(--down);
-  color: #0d0f15;
-  border-color: var(--down);
+.qa-vote-button.mesh-button:disabled {
+  opacity: 0.36;
 }
 
 .qa-net {
+  min-width: 2rem;
+  color: var(--mesh-text);
+  font-size: 0.83rem;
+  font-weight: 790;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  font-size: 0.95rem;
+  text-align: center;
 }
 
 .qa-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
   min-width: 0;
 }
 
 .qa-text {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.4;
-  word-wrap: break-word;
+  color: var(--mesh-text);
+  font-size: clamp(0.96rem, 1.3vw, 1.08rem);
+  font-weight: 570;
+  letter-spacing: -0.013em;
+  line-height: 1.37;
   overflow-wrap: anywhere;
 }
 
 .qa-meta {
   display: flex;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--muted);
+  flex-wrap: wrap;
+  gap: 0.32rem 0.52rem;
+  margin-top: 0.42rem;
+  color: var(--mesh-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.qa-meta > span + span::before {
+  display: inline-block;
+  width: 0.2rem;
+  height: 0.2rem;
+  margin: 0 0.48rem 0.12rem 0;
+  border-radius: 50%;
+  background: currentcolor;
+  content: "";
+  opacity: 0.6;
+}
+
+.qa-answered .qa-text {
+  color: color-mix(in srgb, var(--mesh-text-muted) 88%, transparent);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .qa-answered-tag {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.05em 0.5em;
-  border-radius: 999px;
+  color: var(--mesh-success);
+  font-weight: 720;
 }
 
-.qa-answer-btn {
-  align-self: center;
-  padding: 0.5rem 0.9rem;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.85rem;
+.qa-answer-button {
   white-space: nowrap;
 }
 
-.qa-answer-btn:hover {
-  background: var(--accent);
-  color: #0d0f15;
-  border-color: var(--accent);
+.qa-empty.mesh-empty {
+  align-self: stretch;
+  justify-content: center;
+  min-height: 12rem;
+  padding: 2rem;
 }
 
-/* Presenter mode — bigger text, larger spacing */
-.qa-stage.qa-mode-presenter .qa-text {
-  font-size: 1.4rem;
-  line-height: 1.35;
+.qa-mode-presenter .qa-text {
+  font-size: clamp(1rem, 1.55vw, 1.25rem);
 }
 
-.qa-stage.qa-mode-presenter .qa-item {
-  padding: 1.2rem;
+.qa-mode-presenter .qa-item {
+  padding-block: clamp(0.86rem, 1.9vh, 1.2rem);
 }
 
-.qa-stage.qa-mode-presenter .qa-net {
-  font-size: 1.1rem;
+.qa-settings-section {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border: 1px solid var(--mesh-border);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--mesh-surface) 82%, transparent);
 }
 
-.qa-stage.qa-mode-presenter .qa-answer-btn {
-  font-size: 0.95rem;
-  padding: 0.7rem 1.1rem;
+.qa-settings-section h3 {
+  margin: 0;
+  color: var(--mesh-text);
+  font-size: 0.89rem;
+}
+
+.qa-settings-section p {
+  margin: 0;
+  color: var(--mesh-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.42;
 }
 
 .qa-mode-pick {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.5rem 0.8rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: grid;
+  gap: 0.48rem;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  border: 0;
 }
 
 .qa-mode-pick legend {
-  color: var(--muted);
-  font-size: 0.8rem;
-  padding: 0 0.4rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
-/* Settings shell (shared) */
-.settings-help {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin: 0;
-  line-height: 1.4;
+.settings-check {
+  display: flex;
+  align-items: start;
+  gap: 0.55rem;
+  padding: 0.58rem 0.62rem;
+  border: 1px solid color-mix(in srgb, var(--mesh-border) 78%, transparent);
+  border-radius: 0.68rem;
+  color: var(--mesh-text);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.3;
 }
 
-.settings-help code {
-  background: rgba(255, 255, 255, 0.06);
-  padding: 0.05em 0.3em;
-  border-radius: 3px;
-  font-size: 0.85em;
+.settings-check:has(input:checked) {
+  border-color: color-mix(in srgb, var(--mesh-accent) 60%, var(--mesh-border));
+  background: var(--qa-wash);
+}
+
+.settings-check input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.02rem 0 0;
+  accent-color: var(--mesh-accent);
 }
 
 .settings-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-  margin-top: 0.5rem;
 }
 
-.settings-actions button {
-  flex: 1;
-  padding: 0.7rem;
-  font-size: 0.9rem;
-  background: var(--accent);
-  color: #0d0f15;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
+.settings-actions .mesh-button {
+  min-height: 2.5rem;
 }
 
-.settings-actions button + button {
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+@media (max-width: 52rem) {
+  .qa-stage {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .qa-stage-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .qa-room-status {
+    justify-content: start;
+  }
+
+  .qa-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .qa-composer-panel {
+    min-height: 0;
+  }
+
+  .qa-queue-panel {
+    min-height: min(29rem, 58dvh);
+  }
 }
 
-.settings-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--muted);
+@media (max-width: 36rem) {
+  .qa-entry {
+    overflow: auto;
+  }
+
+  .qa-launch.mesh-launch {
+    min-height: 100%;
+    padding: 4.8rem 1.25rem 1.25rem;
+  }
+
+  .qa-launch .mesh-launch h1 {
+    font-size: clamp(3rem, 15vw, 4.25rem);
+  }
+
+  .qa-stage {
+    gap: 0.75rem;
+    padding-inline: 0.72rem;
+  }
+
+  .qa-stage-title h1 {
+    font-size: 2rem;
+  }
+
+  .qa-mode-note {
+    display: none;
+  }
+
+  .qa-composer-panel.mesh-surface {
+    padding: 1rem;
+  }
+
+  .qa-question-input {
+    min-height: 6.15rem;
+  }
+
+  .qa-compose-footer .mesh-button {
+    flex: 1 0 auto;
+  }
+
+  .qa-item {
+    grid-template-columns: 2.3rem minmax(0, 1fr);
+    padding: 0.67rem;
+  }
+
+  .qa-answer-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .qa-queue-panel {
+    min-height: 23rem;
+  }
+
+  .settings-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.settings-footer a {
-  color: var(--accent);
-  text-decoration: none;
+@media (min-width: 52.0625rem) and (max-height: 44rem) {
+  .qa-stage {
+    gap: 0.55rem;
+    padding-block: 0.5rem;
+  }
+
+  .qa-stage-title h1 {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+  }
+
+  .qa-stage-title > p:last-child {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+  }
+
+  .qa-composer-panel.mesh-surface {
+    padding: 1rem 1.1rem;
+  }
+
+  .qa-panel-heading {
+    gap: 0.36rem;
+  }
+
+  .qa-panel-heading h2 {
+    font-size: 1.42rem;
+  }
+
+  .qa-panel-heading > p:last-child {
+    font-size: 0.77rem;
+    line-height: 1.35;
+  }
+
+  .qa-question-input {
+    min-height: 5.1rem;
+  }
+
+  .qa-question-field .mesh-field-hint {
+    font-size: 0.69rem;
+  }
+
+  .qa-queue-header {
+    padding-block: 0.72rem;
+  }
+
+  .qa-list {
+    padding: 0.52rem;
+  }
+
+  .qa-item {
+    padding: 0.57rem 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa-question-input {
+    transition: none;
+  }
 }

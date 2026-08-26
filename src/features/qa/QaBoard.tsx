@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import { createRoomSync, type RoomSync } from "../sync/yjsRoom";
+import {
+  MeshButton,
+  MeshEmpty,
+  MeshLaunch,
+  MeshStatusPill,
+  MeshSurface,
+  MeshTextArea,
+} from "@baditaflorin/mesh-common";
 import { maybeFetchTurnCredentials } from "../sync/iceConfig";
+import { createRoomSync, type RoomSync } from "../sync/yjsRoom";
 import type { Mode } from "../../App";
 
-type Question = {
+export type Question = {
   id: string;
   text: string;
   ts: number;
   answered: boolean;
+};
+
+export type RankedQuestion = {
+  q: Question;
+  net: number;
 };
 
 type Props = {
@@ -16,11 +29,48 @@ type Props = {
   voterId: string;
 };
 
+/**
+ * Keeps the queue's behavior independent from its presentation: unanswered
+ * questions lead, then the room's current vote score, then arrival order.
+ */
+export function rankQuestions(
+  questions: Question[],
+  voteMap: Map<string, 1 | -1>,
+): RankedQuestion[] {
+  const tally = new Map<string, number>();
+  voteMap.forEach((value, key) => {
+    const colon = key.indexOf(":");
+    if (colon < 0) return;
+    const questionId = key.slice(0, colon);
+    tally.set(questionId, (tally.get(questionId) ?? 0) + value);
+  });
+
+  return [...questions]
+    .map((q) => ({ q, net: tally.get(q.id) ?? 0 }))
+    .sort((a, b) => {
+      if (a.q.answered !== b.q.answered) return a.q.answered ? 1 : -1;
+      if (b.net !== a.net) return b.net - a.net;
+      return a.q.ts - b.q.ts;
+    });
+}
+
+function connectionLabel(count: number): string {
+  if (count <= 0) return "Awareness pending";
+  return `${count} live ${count === 1 ? "connection" : "connections"}`;
+}
+
+function questionTime(timestamp: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(timestamp);
+}
+
 export function QaBoard({ roomId, mode, voterId }: Props) {
   const [armed, setArmed] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [voteMap, setVoteMap] = useState<Map<string, 1 | -1>>(new Map());
-  const [peerCount, setPeerCount] = useState(0);
+  const [awarenessCount, setAwarenessCount] = useState(0);
   const [draft, setDraft] = useState("");
 
   const room = useMemo<RoomSync | null>(() => {
@@ -42,56 +92,54 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
 
   useEffect(() => {
     if (!room) return undefined;
-    const qArr = room.doc.getArray<Question>("questions");
-    const vMap = room.doc.getMap<1 | -1>("votes");
+    const questionArray = room.doc.getArray<Question>("questions");
+    const votes = room.doc.getMap<1 | -1>("votes");
 
-    const refreshQuestions = () => setQuestions(qArr.toArray().map((q) => ({ ...q })));
+    const refreshQuestions = () =>
+      setQuestions(questionArray.toArray().map((question) => ({ ...question })));
     const refreshVotes = () => {
       const next = new Map<string, 1 | -1>();
-      vMap.forEach((value, key) => next.set(key, value));
+      votes.forEach((value, key) => next.set(key, value));
       setVoteMap(next);
+    };
+    const refreshAwareness = () => {
+      setAwarenessCount(room.provider?.awareness.getStates().size ?? 0);
     };
 
     refreshQuestions();
     refreshVotes();
-    qArr.observeDeep(refreshQuestions);
-    vMap.observe(refreshVotes);
-
-    const onAwareness = () => {
-      if (!room.provider) return;
-      const states = room.provider.awareness.getStates();
-      setPeerCount(states.size > 0 ? states.size - 1 : 0);
-    };
-    room.provider?.awareness.on("change", onAwareness);
-    onAwareness();
+    refreshAwareness();
+    questionArray.observeDeep(refreshQuestions);
+    votes.observe(refreshVotes);
+    room.provider?.awareness.on("change", refreshAwareness);
 
     const onMarkAll = () => {
-      const items = qArr.toArray();
+      const items = questionArray.toArray();
       room.doc.transact(() => {
-        items.forEach((q, i) => {
-          if (!q.answered) {
-            qArr.delete(i, 1);
-            qArr.insert(i, [{ ...q, answered: true }]);
+        items.forEach((question, index) => {
+          if (!question.answered) {
+            questionArray.delete(index, 1);
+            questionArray.insert(index, [{ ...question, answered: true }]);
           }
         });
       });
     };
     const onClearAnswered = () => {
       room.doc.transact(() => {
-        for (let i = qArr.length - 1; i >= 0; i--) {
-          const item = qArr.get(i);
-          if (item && item.answered) qArr.delete(i, 1);
+        for (let index = questionArray.length - 1; index >= 0; index -= 1) {
+          const question = questionArray.get(index);
+          if (question?.answered) questionArray.delete(index, 1);
         }
-        // Drop vote entries for deleted questions
-        const remaining = new Set(qArr.toArray().map((q) => q.id));
+        // The vote map is deliberately flat; only drop entries whose question
+        // no longer exists so active votes remain untouched.
+        const remaining = new Set(questionArray.toArray().map((question) => question.id));
         const stale: string[] = [];
-        vMap.forEach((_v, key) => {
+        votes.forEach((_value, key) => {
           const colon = key.indexOf(":");
           if (colon < 0) return;
-          const qid = key.slice(0, colon);
-          if (!remaining.has(qid)) stale.push(key);
+          if (!remaining.has(key.slice(0, colon))) stale.push(key);
         });
-        stale.forEach((k) => vMap.delete(k));
+        stale.forEach((key) => votes.delete(key));
       });
     };
 
@@ -99,36 +147,20 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
     window.addEventListener("qa:clear-answered", onClearAnswered);
 
     return () => {
-      qArr.unobserveDeep(refreshQuestions);
-      vMap.unobserve(refreshVotes);
-      room.provider?.awareness.off("change", onAwareness);
+      questionArray.unobserveDeep(refreshQuestions);
+      votes.unobserve(refreshVotes);
+      room.provider?.awareness.off("change", refreshAwareness);
       window.removeEventListener("qa:mark-all-answered", onMarkAll);
       window.removeEventListener("qa:clear-answered", onClearAnswered);
     };
   }, [room]);
 
-  const sorted = useMemo(() => {
-    const tally = new Map<string, number>();
-    voteMap.forEach((value, key) => {
-      const colon = key.indexOf(":");
-      if (colon < 0) return;
-      const qid = key.slice(0, colon);
-      tally.set(qid, (tally.get(qid) ?? 0) + value);
-    });
-    return [...questions]
-      .map((q) => ({ q, net: tally.get(q.id) ?? 0 }))
-      .sort((a, b) => {
-        if (a.q.answered !== b.q.answered) return a.q.answered ? 1 : -1;
-        if (b.net !== a.net) return b.net - a.net;
-        return a.q.ts - b.q.ts;
-      });
-  }, [questions, voteMap]);
+  const ranked = useMemo(() => rankQuestions(questions, voteMap), [questions, voteMap]);
 
   const submit = () => {
     const text = draft.trim();
     if (!room || text.length === 0) return;
-    const qArr = room.doc.getArray<Question>("questions");
-    qArr.push([
+    room.doc.getArray<Question>("questions").push([
       {
         id: crypto.randomUUID(),
         text: text.slice(0, 500),
@@ -139,131 +171,248 @@ export function QaBoard({ roomId, mode, voterId }: Props) {
     setDraft("");
   };
 
-  const castVote = (qid: string, value: 1 | -1) => {
+  const castVote = (questionId: string, value: 1 | -1) => {
     if (!room) return;
-    const vMap = room.doc.getMap<1 | -1>("votes");
-    const key = `${qid}:${voterId}`;
-    const current = vMap.get(key);
-    if (current === value) {
-      vMap.delete(key);
+    const votes = room.doc.getMap<1 | -1>("votes");
+    const key = `${questionId}:${voterId}`;
+    if (votes.get(key) === value) {
+      votes.delete(key);
     } else {
-      vMap.set(key, value);
+      votes.set(key, value);
     }
   };
 
-  const markAnswered = (qid: string, answered: boolean) => {
+  const markAnswered = (questionId: string, answered: boolean) => {
     if (!room) return;
-    const qArr = room.doc.getArray<Question>("questions");
-    const items = qArr.toArray();
-    const idx = items.findIndex((q) => q.id === qid);
-    if (idx < 0) return;
-    const existing = items[idx];
-    if (!existing) return;
+    const questionArray = room.doc.getArray<Question>("questions");
+    const questionsInRoom = questionArray.toArray();
+    const index = questionsInRoom.findIndex((question) => question.id === questionId);
+    const current = questionsInRoom[index];
+    if (!current || index < 0) return;
     room.doc.transact(() => {
-      qArr.delete(idx, 1);
-      qArr.insert(idx, [{ ...existing, answered }]);
+      questionArray.delete(index, 1);
+      questionArray.insert(index, [{ ...current, answered }]);
     });
   };
 
   if (!armed) {
     return (
-      <div className="qa-arm">
-        <h1>mesh-anonymous-qa</h1>
-        <p>
-          Anonymous audience Q&amp;A. Submit questions, upvote others. Presenter sees the list
-          sorted by votes. No login. No tracking. No server you have to trust.
-        </p>
-        <button type="button" className="qa-arm-button" onClick={() => setArmed(true)}>
-          Join room
-        </button>
-        <p className="qa-hint">
-          Room <code>{roomId}</code> · mode <code>{mode}</code>
-        </p>
-      </div>
+      <main className="qa-entry" data-qa-view="entry">
+        <MeshLaunch
+          className="qa-launch"
+          eyebrow="Facilitated question room"
+          heading="Let the room ask."
+          promise="Collect the questions worth hearing without turning the conversation into a feed."
+          presence={
+            <span>
+              This room is <code>{roomId}</code>
+            </span>
+          }
+          preview={
+            <section className="qa-visibility-note" data-qa-visibility="shared-room">
+              <span className="qa-note-kicker">Shared-room visibility</span>
+              <p>
+                Questions are stored without an author label. Everyone who joins this room can read
+                them.
+              </p>
+              <p>Do not include names or sensitive details.</p>
+            </section>
+          }
+          primaryAction={{
+            label: "Open this question room",
+            onClick: () => setArmed(true),
+          }}
+        />
+      </main>
     );
   }
 
   return (
-    <div className={`qa-stage qa-mode-${mode}`}>
-      <div className="qa-hud">
-        <span>{peerCount + 1} phones</span>
-        <span>·</span>
-        <span>{questions.length} questions</span>
-        <span>·</span>
-        <span>{mode}</span>
-      </div>
+    <main className={`qa-stage qa-mode-${mode}`} data-qa-view="room">
+      <header className="qa-stage-header">
+        <div className="qa-stage-title">
+          <p className="qa-overline">Facilitated questions</p>
+          <h1>Room queue</h1>
+          <p>
+            Questions in <code>{roomId}</code> are visible to everyone sharing this room.
+          </p>
+        </div>
+        <div className="qa-room-status" aria-label="Room status">
+          <MeshStatusPill
+            tone={awarenessCount > 0 ? "live" : "warning"}
+            dot
+            announce="polite"
+            data-qa-awareness-count={awarenessCount}
+          >
+            {connectionLabel(awarenessCount)}
+          </MeshStatusPill>
+          <MeshStatusPill tone="info">{questions.length} questions</MeshStatusPill>
+          <span className="qa-mode-note">Local role · {mode}</span>
+        </div>
+      </header>
 
-      {mode === "audience" && (
-        <form
-          className="qa-compose"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          <textarea
-            placeholder="Ask anything…"
-            value={draft}
-            maxLength={500}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={2}
-          />
-          <button type="submit" disabled={draft.trim().length === 0}>
-            Submit
-          </button>
-        </form>
-      )}
-
-      <ul className="qa-list">
-        {sorted.length === 0 && <li className="qa-empty">No questions yet.</li>}
-        {sorted.map(({ q, net }) => {
-          const myVote = voteMap.get(`${q.id}:${voterId}`);
-          return (
-            <li
-              key={q.id}
-              className={`qa-item${q.answered ? " qa-answered" : ""} qa-vote-${myVote ?? "none"}`}
+      <div className="qa-workspace">
+        {mode === "audience" ? (
+          <MeshSurface
+            as="section"
+            tone="accent"
+            padding="lg"
+            className="qa-composer-panel"
+            aria-labelledby="qa-compose-title"
+          >
+            <div className="qa-panel-heading">
+              <p className="qa-panel-kicker">Your prompt</p>
+              <h2 id="qa-compose-title">Ask the room</h2>
+              <p>
+                Add one clear question. It will appear in the shared queue without an author label.
+              </p>
+            </div>
+            <form
+              className="qa-compose"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+              }}
             >
-              <div className="qa-votes">
-                <button
-                  type="button"
-                  className={`qa-vote-btn qa-up${myVote === 1 ? " qa-active" : ""}`}
-                  onClick={() => castVote(q.id, 1)}
-                  aria-label="Upvote"
-                  disabled={q.answered}
-                >
-                  ▲
-                </button>
-                <span className="qa-net">{net}</span>
-                <button
-                  type="button"
-                  className={`qa-vote-btn qa-down${myVote === -1 ? " qa-active" : ""}`}
-                  onClick={() => castVote(q.id, -1)}
-                  aria-label="Downvote"
-                  disabled={q.answered}
-                >
-                  ▼
-                </button>
+              <MeshTextArea
+                id="qa-question-draft"
+                name="question"
+                label="Your question"
+                hint="Questions are stored without an author label. Everyone who joins this room can read them."
+                fieldClassName="qa-question-field"
+                className="qa-question-input"
+                placeholder="What would make this clearer?"
+                value={draft}
+                onValueChange={setDraft}
+                maxLength={500}
+                rows={4}
+              />
+              <div className="qa-compose-footer">
+                <span className="qa-character-count" aria-live="polite">
+                  {draft.length} / 500
+                </span>
+                <MeshButton type="submit" disabled={draft.trim().length === 0}>
+                  Submit question
+                </MeshButton>
               </div>
-              <div className="qa-body">
-                <p className="qa-text">{q.text}</p>
-                <div className="qa-meta">
-                  <span>{new Date(q.ts).toLocaleTimeString()}</span>
-                  {q.answered && <span className="qa-answered-tag">answered</span>}
-                </div>
-              </div>
-              {mode === "presenter" && (
-                <button
-                  type="button"
-                  className="qa-answer-btn"
-                  onClick={() => markAnswered(q.id, !q.answered)}
-                >
-                  {q.answered ? "Unmark" : "Mark answered"}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+            </form>
+          </MeshSurface>
+        ) : (
+          <MeshSurface
+            as="section"
+            tone="accent"
+            padding="lg"
+            className="qa-composer-panel qa-facilitator-panel"
+            aria-labelledby="qa-facilitator-title"
+          >
+            <div className="qa-panel-heading">
+              <p className="qa-panel-kicker">Facilitator view</p>
+              <h2 id="qa-facilitator-title">Keep the conversation moving.</h2>
+              <p>
+                Mark a question answered when it has been covered. This local role changes the
+                controls on this browser; it is not an access-control boundary.
+              </p>
+            </div>
+            <div className="qa-facilitator-summary">
+              <span>{ranked.filter(({ q }) => !q.answered).length} open</span>
+              <span>{ranked.filter(({ q }) => q.answered).length} covered</span>
+            </div>
+          </MeshSurface>
+        )}
+
+        <MeshSurface
+          as="section"
+          tone="raised"
+          padding="none"
+          className="qa-queue-panel"
+          aria-labelledby="qa-queue-title"
+        >
+          <header className="qa-queue-header">
+            <div>
+              <p className="qa-panel-kicker">Shared queue</p>
+              <h2 id="qa-queue-title">What the room wants to cover</h2>
+            </div>
+            <span className="qa-queue-count" aria-label={`${questions.length} questions in queue`}>
+              {questions.length}
+            </span>
+          </header>
+
+          {ranked.length === 0 ? (
+            <MeshEmpty
+              className="qa-empty"
+              size="lg"
+              title="The queue is clear."
+              message={
+                mode === "audience"
+                  ? "Ask the first question to give the room a place to begin."
+                  : "Questions from the room will collect here in vote order."
+              }
+            />
+          ) : (
+            <ul className="qa-list" aria-label="Question queue">
+              {ranked.map(({ q, net }) => {
+                const myVote = voteMap.get(`${q.id}:${voterId}`);
+                const questionLabel = q.answered ? "Answered question" : "Open question";
+                return (
+                  <li
+                    key={q.id}
+                    className={`qa-item${q.answered ? " qa-answered" : ""} qa-vote-${myVote ?? "none"}`}
+                  >
+                    <div className="qa-votes" aria-label={`${net} net votes`}>
+                      <MeshButton
+                        type="button"
+                        variant="quiet"
+                        size="sm"
+                        className="qa-vote-button qa-up"
+                        onClick={() => castVote(q.id, 1)}
+                        aria-label={`Upvote question: ${q.text}`}
+                        aria-pressed={myVote === 1}
+                        disabled={q.answered}
+                      >
+                        ↑
+                      </MeshButton>
+                      <output className="qa-net" aria-label={`${net} net votes`}>
+                        {net}
+                      </output>
+                      <MeshButton
+                        type="button"
+                        variant="quiet"
+                        size="sm"
+                        className="qa-vote-button qa-down"
+                        onClick={() => castVote(q.id, -1)}
+                        aria-label={`Downvote question: ${q.text}`}
+                        aria-pressed={myVote === -1}
+                        disabled={q.answered}
+                      >
+                        ↓
+                      </MeshButton>
+                    </div>
+                    <article className="qa-body" aria-label={questionLabel}>
+                      <p className="qa-text">{q.text}</p>
+                      <div className="qa-meta">
+                        <time dateTime={new Date(q.ts).toISOString()}>{questionTime(q.ts)}</time>
+                        <span>author label not stored</span>
+                        {q.answered ? <span className="qa-answered-tag">Covered</span> : null}
+                      </div>
+                    </article>
+                    {mode === "presenter" ? (
+                      <MeshButton
+                        type="button"
+                        variant={q.answered ? "secondary" : "primary"}
+                        size="sm"
+                        className="qa-answer-button"
+                        onClick={() => markAnswered(q.id, !q.answered)}
+                      >
+                        {q.answered ? "Reopen" : "Mark covered"}
+                      </MeshButton>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </MeshSurface>
+      </div>
+    </main>
   );
 }
